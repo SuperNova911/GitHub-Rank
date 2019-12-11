@@ -1,0 +1,38 @@
+﻿
+@{
+    ViewData["Title"] = "Follower Ranking";
+}
+
+@model List<RankItem>
+
+<div>
+    <h1>GitHub Follower Ranking</h1>
+    <div>
+        <h2>Most follower user</h2>
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Follower</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < 100 && i < Model.Count; i++)
+                {
+                    var rankItem = Model[i];
+                    <tr>
+                        <td>@Html.DisplayFor(e => rankItem.Rank)</td>
+                        <td>
+                            <a href="@rankItem.Reference" style="text-decoration: none">
+                                <img class="avatar_image" src="@rankItem.AvatarUrl" />
+                            </a>
+                            <a href="@rankItem.Reference">@rankItem.Name</a>
+                        </td>
+                        <td>@Html.DisplayFor(e => rankItem.Score)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

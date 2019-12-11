@@ -1,0 +1,108 @@
+﻿@{
+    ViewData["Title"] = "GitHub Rank";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12 jumbotron">
+            <h1>GitHub Rank</h1>
+            <p>This is test message</p>
+            <form action="/search" accept-charset="UTP-8" method="get">
+                <div class="row">
+                    <div class="form-group col-lg-3">
+                        <input id="search_user" class="form-control col-lg-8" type="search" name="username" placeholder="Search github username" />
+                    </div>
+                    <div class="col-lg-1">
+                        <input class="btn btn-light" type="submit" name="action" value="Search" />
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <h2><a href="/most-star-user">Users</a></h2>
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>User</th>
+                        <th>Star</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < 10; i++)
+                    {
+                        var rankItem = ((List<RankItem>)ViewData["MostStarUsers"])[i];
+                        <tr>
+                            <td>@Html.DisplayFor(e => rankItem.Rank)</td>
+                            <td>
+                                <a href="@rankItem.Reference" style="text-decoration: none">
+                                    <img class="avatar_image" src="@rankItem.AvatarUrl" />
+                                </a>
+                                <a href="@rankItem.Reference">@rankItem.Name</a>
+                            </td>
+                            <td>@Html.DisplayFor(e => rankItem.Score)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-4">
+            <h2><a href="/most-star-user">Organizations</a></h2>
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>User</th>
+                        <th>Star</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < 10; i++)
+                    {
+                        var rankItem = ((List<RankItem>)ViewData["MostStarOrganizations"])[i];
+                        <tr>
+                            <td>@Html.DisplayFor(e => rankItem.Rank)</td>
+                            <td>
+                                <a href="@rankItem.Reference" style="text-decoration: none">
+                                    <img class="avatar_image" src="@rankItem.AvatarUrl" />
+                                </a>
+                                <a href="@rankItem.Reference">@rankItem.Name</a>
+                            </td>
+                            <td>@Html.DisplayFor(e => rankItem.Score)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-4">
+            <h2><a href="/most-star-user">Repositories</a></h2>
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>User</th>
+                        <th>Star</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < 10; i++)
+                    {
+                        var rankItem = ((List<RankItem>)ViewData["MostStarRepositories"])[i];
+                        <tr>
+                            <td>@Html.DisplayFor(e => rankItem.Rank)</td>
+                            <td>
+                                <a href="@rankItem.Reference" style="text-decoration: none">
+                                    <img class="avatar_image" src="@rankItem.AvatarUrl" />
+                                </a>
+                                <a href="@rankItem.Reference">@rankItem.Name</a>
+                            </td>
+                            <td>@Html.DisplayFor(e => rankItem.Score)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
