@@ -53,6 +53,12 @@ namespace GitHubDataCollector
                 bool updateInvalid = false;
                 while (follower == false || updateRepo == false || updateInvalid == false)
                 {
+                    if (GitHubAPI.Instance.CoreRateLimit.Remaining < TargetGitHubApiCoreRemain)
+                    {
+                        Console.WriteLine($"Reach {nameof(TargetGitHubApiCoreRemain)}, current: {GitHubAPI.Instance.CoreRateLimit}");
+                        break;
+                    }
+
                     if (follower == false)
                     {
                         CurrentUserNumber = DatabaseManager.Instance.User_Count();
