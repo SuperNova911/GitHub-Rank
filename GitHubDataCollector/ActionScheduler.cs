@@ -40,74 +40,69 @@ namespace GitHubDataCollector
 
         public void CompleteCycle()
         {
-            while (true)
+            Console.WriteLine();
+            Console.WriteLine($"{nameof(ActionScheduler)} complete cycle start, {DateTime.Now}");
+            PrintCurrentProgress();
+            Console.WriteLine();
+
+            bool follower = false;
+            bool updateRepo = false;
+            bool updateInvalid = false;
+            while (follower == false || updateRepo == false || updateInvalid == false)
             {
-                Console.WriteLine($"{nameof(ActionScheduler)} complete cycle start, {DateTime.Now}");
-                PrintCurrentProgress();
-                Console.WriteLine();
-
-                ReadSettings(settingFilePath);
-
-                bool follower = false;
-                bool updateRepo = false;
-                bool updateInvalid = false;
-                while (follower == false || updateRepo == false || updateInvalid == false)
+                if (follower == false)
                 {
-                    if (follower == false)
+                    CurrentUserNumber = DatabaseManager.Instance.User_Count();
+                    if (CurrentUserNumber < TargetUserNumber)
                     {
-                        CurrentUserNumber = DatabaseManager.Instance.User_Count();
-                        if (CurrentUserNumber < TargetUserNumber)
-                        {
-                            GetFollowers();
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Reach {nameof(TargetUserNumber)}, current: {CurrentUserNumber}");
-                            follower = true;
-                        }
+                        GetFollowers();
                     }
-
-                    if (updateRepo == false)
+                    else
                     {
-                        CurrentRepositoryNumber = DatabaseManager.Instance.Repository_Count();
-                        if (CurrentRepositoryNumber < TargetRepositoryNumber)
-                        {
-                            UpdateAccountRepository();
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Reach {nameof(TargetRepositoryNumber)}, current: {CurrentRepositoryNumber}");
-                            updateRepo = true;
-                        }
-                    }
-
-                    if (updateInvalid == false)
-                    {
-                        int invalidAccountNumber = DatabaseManager.Instance.Account_CountInvalid();
-                        if (invalidAccountNumber > 0)
-                        {
-                            UpdateInvalidAccounts();
-                        }
-                        else
-                        {
-                            updateInvalid = true;
-                        }
-                    }
-
-                    if (GitHubAPI.Instance.CoreRateLimit.Remaining < TargetGitHubApiCoreRemain)
-                    {
-                        Console.WriteLine($"Reach {nameof(TargetGitHubApiCoreRemain)}, current: {GitHubAPI.Instance.CoreRateLimit.Remaining}");
-                        break;
+                        Console.WriteLine($"Reach {nameof(TargetUserNumber)}, current: {CurrentUserNumber}");
+                        follower = true;
                     }
                 }
 
-                Console.WriteLine($"End of complete cycle, {DateTime.Now}");
-                PrintCurrentProgress();
-                Console.WriteLine();
+                if (updateRepo == false)
+                {
+                    CurrentRepositoryNumber = DatabaseManager.Instance.Repository_Count();
+                    if (CurrentRepositoryNumber < TargetRepositoryNumber)
+                    {
+                        UpdateAccountRepository();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Reach {nameof(TargetRepositoryNumber)}, current: {CurrentRepositoryNumber}");
+                        updateRepo = true;
+                    }
+                }
 
-                GitHubAPI.Instance.PrintCurrentRateLimit();
-                GitHubAPI.Instance.WaitForNextCoreReset();
+                if (updateInvalid == false)
+                {
+                    int invalidAccountNumber = DatabaseManager.Instance.Account_CountInvalid();
+                    if (invalidAccountNumber > 0)
+                    {
+                        UpdateInvalidAccounts();
+                    }
+                    else
+                    {
+                        updateInvalid = true;
+                    }
+                }
+
+                if (GitHubAPI.Instance.CoreRateLimit.Remaining < TargetGitHubApiCoreRemain)
+                {
+                    Console.WriteLine($"Reach {nameof(TargetGitHubApiCoreRemain)}, current: {GitHubAPI.Instance.CoreRateLimit.Remaining}");
+                    break;
+                }
             }
+
+            Console.WriteLine($"End of complete cycle, {DateTime.Now}");
+            PrintCurrentProgress();
+            Console.WriteLine();
+
+            GitHubAPI.Instance.PrintCurrentRateLimit();
         }
 
         public void RepoUpdateCycle()

@@ -1,0 +1,41 @@
+﻿
+@{
+    ViewData["Title"] = "Language Statistics";
+}
+
+@model List<LanguageModel>
+
+<div>
+    <div>
+        <div class="row">
+            <a class="page-link" href="/statistics/language">Language</a>
+            <a class="page-link" href="/statistics/license">License</a>
+        </div>
+    </div>
+    <h1>GitHub Language Statistics</h1>
+    <div>
+        <h2>Top @Model.Count Languages</h2>
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Number</th>
+                    <th>Ratio</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < 100 && i < Model.Count; i++)
+                {
+                    var language = Model[i];
+                    <tr>
+                        <td>@Html.DisplayFor(e => language.Rank)</td>
+                        <td>@Html.DisplayFor(e => language.Name)</td>
+                        <td>@Html.DisplayFor(e => language.Score)</td>
+                        <td>@Html.DisplayFor(e => language.Ratio)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

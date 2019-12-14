@@ -24,7 +24,7 @@ namespace GitHubDataCollector
             Console.WriteLine("Connect to DB");
             DatabaseManager.Instance.ConnectToDB(serverAddress, databaseName, userId, password);
 
-            Console.WriteLine("Init GitHub API");
+            Console.WriteLine("Initialize GitHub Api");
             GitHubAPI.Instance.InitializeGitHubClient(new Credentials(token));
 
             AccountCollection.Instance.UpdateIdFromDB();
@@ -34,7 +34,6 @@ namespace GitHubDataCollector
             actionScheduler.UpdateCurrentElementNumber();
 
             actionScheduler.CompleteCycle();
-            //actionScheduler.RepoUpdateCycle();
 
             Console.WriteLine("Close DB");
             DatabaseManager.Instance.CloseDB();

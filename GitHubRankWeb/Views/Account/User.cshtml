@@ -1,0 +1,100 @@
+﻿
+@{
+    ViewData["Title"] = "User";
+}
+
+@model UserModel
+
+@if (Model == null)
+{
+    <a>No match user: @ViewData["login"]</a>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-3">
+            <div>
+                <div>
+                    <img class="avatar_image_big" src="@Model.AvatarUrl" />
+                </div>
+                <div>
+                    <h1>
+                        <a href="@Model.HtmlUrl">@Model.Name</a>
+                    </h1>
+                </div>
+                <div>
+                    <a>Star: ⭐@Model.Star</a>
+                </div>
+                <div>
+                    <a>Fork: 🍴@Model.Fork</a>
+                </div>
+                <div>
+                    <a>Follower: @Model.Follower</a>
+                </div>
+                <div>
+                    <a>Following: @Model.Following</a>
+                </div>
+                @if (string.IsNullOrWhiteSpace(Model.Email) == false)
+                {
+                    <div>
+                        <a href="mailto:@Model.Email">Email: @Model.Email</a>
+                    </div>
+                }
+                @if (string.IsNullOrWhiteSpace(Model.Bio) == false)
+                {
+                    <div>
+                        <i>@Model.Bio</i>
+                    </div>
+                }
+                @if (string.IsNullOrWhiteSpace(Model.Company) == false)
+                {
+                    <div>
+                        <a>Company: @Model.Company</a>
+                    </div>
+                }
+                @if (string.IsNullOrWhiteSpace(Model.Location) == false)
+                {
+                    <div>
+                        <a>Location: @Model.Location</a>
+                    </div>
+                }
+                @if (string.IsNullOrWhiteSpace(Model.BlogUrl) == false)
+                {
+                    <div>
+                        <a href="@Model.BlogUrl">Blog: @Model.BlogUrl</a>
+                    </div>
+                }
+                <div>
+                    <a>Fetched on @Model.FetchedAt</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Star</th>
+                        <th>Fork</th>
+                        <th>Language</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var repoModel in Model.RepositoryModels)
+                    {
+                        <tr>
+                            <td>
+                                <a href="@repoModel.HtmlUrl">@repoModel.Name</a>
+                            </td>
+                            <td>@repoModel.Star</td>
+                            <td>@repoModel.Fork</td>
+                            <td>@repoModel.Language</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <a href="@Model.HtmlUrl">Show more</a>
+        </div>
+    </div>
+}
+

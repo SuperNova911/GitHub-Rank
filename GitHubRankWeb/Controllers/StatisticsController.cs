@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GitHubRankWeb.Core;
+using GitHubRankWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GitHubRankWeb.Controllers
@@ -15,17 +17,14 @@ namespace GitHubRankWeb.Controllers
 
         public IActionResult Language()
         {
-            return View();
-        }
-
-        public IActionResult Commit()
-        {
-            return View();
+            List<LanguageModel> mostLanguages = DataCollection.Instance.MostLanguages;
+            return View(mostLanguages);
         }
 
         public IActionResult License()
         {
-            return View();
+            List<LicenseModel> mostLicenses = DataCollection.Instance.MostLicenses;
+            return View(mostLicenses);
         }
     }
 }

@@ -421,6 +421,7 @@ namespace GitHubDataCollector
             using var command = new MySqlCommand();
             command.Connection = connection;
             command.CommandText = "SELECT * FROM `github_rank`.`user_account` WHERE `login` = @login;";
+            command.Parameters.AddWithValue("@login", login);
 
             using MySqlDataReader dataReader = command.ExecuteReader();
             return dataReader.Read() ? ParseUser(dataReader) : null;
@@ -431,6 +432,7 @@ namespace GitHubDataCollector
             using var command = new MySqlCommand();
             command.Connection = connection;
             command.CommandText = "SELECT * FROM `github_rank`.`organization_account` WHERE `login` = @login;";
+            command.Parameters.AddWithValue("@login", login);
 
             using MySqlDataReader dataReader = command.ExecuteReader();
             return dataReader.Read() ? ParseOrganization(dataReader) : null;
@@ -648,11 +650,28 @@ namespace GitHubDataCollector
             }
         }
 
+        public List<Repository> Repositories_SelectAllByOwnerLogin(string login, int limit)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`repository` AS `r` JOIN `github_rank`.`account` AS `a` ON `r`.`owner_id` = `a`.`id` WHERE `a`.`login` = @login LIMIT @limit;";
+            command.Parameters.AddWithValue("@login", login);
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            var repositories = new List<Repository>();
+            while (dataReader.Read())
+            {
+                repositories.Add(ParseRepository(dataReader));
+            }
+            return repositories;
+        }
+
         public List<Repository> Repository_SelectAll(int limit)
         {
             var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`repository` LIMIT @limit";
+            command.CommandText = "SELECT * FROM `github_rank`.`repository` LIMIT @limit;";
             command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
 
             var repositories = new List<Repository>();
@@ -767,7 +786,7 @@ namespace GitHubDataCollector
         {
             return new Repository(
                 dataReader.GetInt64("id"), dataReader.GetString("node_id"), dataReader.GetInt64("owner_id"), dataReader.GetString("name"),
-                dataReader.GetString("description"), dataReader.GetString("language"), dataReader.GetString("license_key"), dataReader.GetInt32("subscribers_count"),
+                dataReader.GetString("description"), dataReader.GetString("language"), dataReader.IsDBNull("license_key") ? null : dataReader.GetString("license_key"), dataReader.GetInt32("subscribers_count"),
                 dataReader.GetInt32("stargazers_count"), dataReader.GetInt32("forks_count"), dataReader.GetBoolean("fork"), dataReader.GetBoolean("archived"),
                 dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetDateTime("created_at"), dataReader.GetDateTime("updated_at"),
                 dataReader.GetInt64("parent_id"), dataReader.GetInt64("source_id"), dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"));

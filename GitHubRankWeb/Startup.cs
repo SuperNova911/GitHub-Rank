@@ -54,6 +54,9 @@ namespace GitHubRankWeb
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
+                endpoints.MapControllerRoute(
+                    name: "ranking",
+                    pattern: "{controller=Ranking}/{action=Star}");
             });
 
             app.UseForwardedHeaders(new ForwardedHeadersOptions

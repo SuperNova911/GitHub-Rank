@@ -7,27 +7,28 @@ using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Security.Principal;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GitHubRankWeb.Core
 {
-    public class DatabaseManager
+    public class DatabaseManagerWeb
     {
         private MySqlConnection connection = null;
         private Queue<MySqlCommand> commands = new Queue<MySqlCommand>();
 
         public bool Connected => connection != null && connection.State == ConnectionState.Open;
 
-        private DatabaseManager()
+        private DatabaseManagerWeb()
         {
 
         }
 
         #region Singleton
-        private static DatabaseManager instance = null;
+        private static DatabaseManagerWeb instance = null;
         private static readonly object instanceLock = new object();
 
-        public static DatabaseManager Instance
+        public static DatabaseManagerWeb Instance
         {
             get
             {
@@ -35,7 +36,7 @@ namespace GitHubRankWeb.Core
                 {
                     if (instance == null)
                     {
-                        instance = new DatabaseManager();
+                        instance = new DatabaseManagerWeb();
                     }
                     return instance;
                 }
@@ -75,281 +76,6 @@ namespace GitHubRankWeb.Core
             connection.Close();
         }
 
-        public List<RankItem> MostStarUser_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_star_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("total_star_count"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostStarOrganization_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_star_organization` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("total_star_count"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostStarRepository_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_star_repository_with_account` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string repoName = dataReader.GetString("name");
-                    string userLogin = dataReader.GetString("owner_login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = $"{userLogin}/{repoName}",
-                        Score = dataReader.GetInt32("stargazers_count"),
-                        Reference = $"/account/{userLogin}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostForkUser_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_fork_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("total_fork_count"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostForkOrganization_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_fork_organization` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("total_fork_count"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostForkRepository_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT repo.*, account.login as owner_login, account.avatar_url " +
-                "FROM `github_rank`.`most_fork_repository` as repo JOIN `github_rank`.`account` as account ON repo.owner_id = account.id " +
-                "ORDER BY repo.forks_count DESC LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("owner_login");
-                    string repoName = dataReader.GetString("name");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = $"{login}/{repoName}",
-                        Score = dataReader.GetInt32("forks_count"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostRepoUser_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_public_repo_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("public_repos"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostRepoOrganization_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_public_repo_organization` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("public_repos"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostFollowerUser_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_follower_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("followers"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        public List<RankItem> MostFollowingUser_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_following_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                int rank = 1;
-                var items = new List<RankItem>();
-                while (dataReader.Read())
-                {
-                    string login = dataReader.GetString("login");
-                    items.Add(new RankItem()
-                    {
-                        Rank = rank++,
-                        AvatarUrl = dataReader.GetString("avatar_url"),
-                        Name = login,
-                        Score = dataReader.GetInt32("following"),
-                        Reference = $"/account/{login}"
-                    });
-                }
-                return items;
-            }
-        }
-
-        #region Account
         public void Account_InsertOrUpdate(Account account)
         {
             var command = new MySqlCommand();
@@ -402,78 +128,6 @@ namespace GitHubRankWeb.Core
             }
         }
 
-        public List<User> User_SelectInvalidAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`user_account_invalid` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                var users = new List<User>();
-                while (dataReader.Read())
-                {
-                    users.Add(ParseUser(dataReader));
-                }
-                return users;
-            }
-        }
-
-        public List<string> UserLogin_SelectNeedRepoUpdate(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_user` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                var userLogins = new List<string>();
-                while (dataReader.Read())
-                {
-                    userLogins.Add(dataReader.GetString("login"));
-                }
-                return userLogins;
-            }
-        }
-
-        public List<Organization> Organization_SelectInvalidAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`organization_account_invalid` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                var organizations = new List<Organization>();
-                while (dataReader.Read())
-                {
-                    organizations.Add(ParseOrganization(dataReader));
-                }
-                return organizations;
-            }
-        }
-
-        public List<string> OrganizationLogin_SelectNeedRepoUpdate(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_organization` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                var orgLogins = new List<string>();
-                while (dataReader.Read())
-                {
-                    orgLogins.Add(dataReader.GetString("login"));
-                }
-                return orgLogins;
-            }
-        }
-
         private void User_InsertOrUpdate(User user)
         {
             var command = new MySqlCommand();
@@ -488,7 +142,7 @@ namespace GitHubRankWeb.Core
             {
                 command.CommandText = "INSERT INTO `github_rank`.`user` (`account_id`, `site_admin`, `suspended`, `suspended_at`, `updated_at`)" +
                     "VALUES (@account_id, @site_admin, @suspended, @suspended_at, @updated_at)" +
-                    "ON DUPLICATE KEY UPDATE `account_id` = @account_id";
+                    "ON DUPLICATE KEY UPDATE `account_id` = @account_id;";
             }
 
             command.Parameters.AddWithValue("@account_id", user.Id);
@@ -509,238 +163,484 @@ namespace GitHubRankWeb.Core
             command.Parameters.AddWithValue("@account_id", organization.Id);
             command.ExecuteNonQuery();
         }
-        #endregion
 
-        #region License
-        public void Lisence_InsertOrUpdate(GitHubDataCollector.License license)
+        public void Repository_InsertOrUpdate(List<Repository> repositories)
         {
-            var command = new MySqlCommand();
-            command.CommandText = "INSERT INTO `github_rank`.`license` (`key`, `node_id`, `name`, `spdx_id`, `api_url`) " +
-                "VALUES (@key, @node_id, @name, @spdx_id, @api_url)" +
-                "ON DUPLICATE KEY UPDATE `name` = @name, `spdx_id` = @spdx_id, `api_url` = @api_url;";
-            command.Connection = connection;
+            if (repositories == null || repositories.Count == 0)
+            {
+                return;
+            }
 
-            command.Parameters.AddWithValue("@key", license.Key);
-            command.Parameters.AddWithValue("@node_id", license.NodeId);
-            command.Parameters.AddWithValue("@name", license.Name);
-            command.Parameters.AddWithValue("@spdx_id", license.SpdxId);
-            command.Parameters.AddWithValue("@api_url", license.ApiUrl);
+            foreach (List<Repository> repos in repositories.Split(100))
+            {
+                using var command = new MySqlCommand();
+                command.Connection = connection;
 
-            command.ExecuteNonQuery();
+                var commandText = new StringBuilder();
+                for (int i = 0; i < repos.Count; i++)
+                {
+                    Repository repo = repos[i];
+                    if (repo.Valid)
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
+                            $"VALUES (@id{i}, @node_id{i}, @owner_id{i}, @name{i}, @description{i}, @language{i}, @license_key{i}, @subscribers_count{i}, @stargazers_count{i}, @forks_count{i}, @fork{i}, @archived{i}, @html_url{i}, @api_url{i}, @created_at{i}, @updated_at{i}, @parent_id{i}, @source_id{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `owner_id` = @owner_id{i}, `name` = @name{i}, `description` = @description{i}, `language` = @language{i}, `license_key` = @license_key{i}, `subscribers_count` = @subscribers_count{i}, `stargazers_count` = @stargazers_count{i}, `forks_count` = @forks_count{i}, `fork` = @fork{i}, `archived` = @archived{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `created_at` = @created_at{i}, `updated_at` = @updated_at{i}, `fetched_at` = @fetched_at{i}, `valid` = @valid{i};");
+                    }
+                    else
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
+                            $"VALUES (@id{i}, @node_id{i}, @owner_id{i}, @name{i}, @description{i}, @language{i}, @license_key{i}, @subscribers_count{i}, @stargazers_count{i}, @forks_count{i}, @fork{i}, @archived{i}, @html_url{i}, @api_url{i}, @created_at{i}, @updated_at{i}, @parent_id{i}, @source_id{i}, @fetched_at{i}, @valid{i})" +
+                            $"ON DUPLICATE KEY UPDATE `owner_id` = @owner_id{i}, `name` = @name{i}, `description` = @description{i}, `language` = @language{i}, `license_key` = @license_key{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `updated_at` = @updated_at{i};");
+                    }
+
+                    command.Parameters.AddWithValue($"@id{i}", repo.Id);
+                    command.Parameters.AddWithValue($"@node_id{i}", repo.NodeId);
+                    command.Parameters.AddWithValue($"@owner_id{i}", repo.OwnerId);
+                    command.Parameters.AddWithValue($"@name{i}", repo.Name);
+                    command.Parameters.AddWithValue($"@description{i}", repo.Description);
+                    command.Parameters.AddWithValue($"@language{i}", repo.Language);
+                    command.Parameters.AddWithValue($"@license_key{i}", repo.LicenseKey);
+                    command.Parameters.AddWithValue($"@subscribers_count{i}", repo.SubscribersCount);
+                    command.Parameters.AddWithValue($"@stargazers_count{i}", repo.StargazersCount);
+                    command.Parameters.AddWithValue($"@forks_count{i}", repo.ForksCount);
+                    command.Parameters.AddWithValue($"@fork{i}", repo.Fork);
+                    command.Parameters.AddWithValue($"@archived{i}", repo.Archived);
+                    command.Parameters.AddWithValue($"@html_url{i}", repo.HtmlUrl);
+                    command.Parameters.AddWithValue($"@api_url{i}", repo.ApiUrl);
+                    command.Parameters.AddWithValue($"@created_at{i}", repo.CreatedAt);
+                    command.Parameters.AddWithValue($"@updated_at{i}", repo.UpdatedAt);
+                    command.Parameters.AddWithValue($"@parent_id{i}", repo.ParentId);
+                    command.Parameters.AddWithValue($"@source_id{i}", repo.SourceId);
+                    command.Parameters.AddWithValue($"@fetched_at{i}", repo.FetchedAt);
+                    command.Parameters.AddWithValue($"@valid{i}", repo.Valid);
+                }
+                command.CommandText = commandText.ToString();
+
+                command.ExecuteNonQuery();
+            }
         }
 
-        public List<GitHubDataCollector.License> License_SelectAll(int limit)
+        public List<RankItem> MostStarUser_SelectAll(int limit)
         {
             var command = new MySqlCommand();
-            command.CommandText = "SELECT * FROM `github_rank`.`license` LIMIT @limit";
             command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_star_user` LIMIT @limit";
             command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
 
             using (MySqlDataReader dataReader = command.ExecuteReader())
             {
-                var licenses = new List<GitHubDataCollector.License>();
+                int rank = 1;
+                var items = new List<RankItem>();
                 while (dataReader.Read())
                 {
-                    licenses.Add(ParseLicense(dataReader));
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("total_star_count"),
+                        Reference = $"/account/user?login={login}"
+                    });
                 }
-                return licenses;
-            }
-        }
-        #endregion
-
-        #region Repository
-        public void Repository_InsertOrUpdate(Repository repo)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            if (repo.Valid)
-            {
-                command.CommandText = "INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
-                    "VALUES (@id, @node_id, @owner_id, @name, @description, @language, @license_key, @subscribers_count, @stargazers_count, @forks_count, @fork, @archived, @html_url, @api_url, @created_at, @updated_at, @parent_id, @source_id, @fetched_at, @valid)" +
-                    "ON DUPLICATE KEY UPDATE `owner_id` = @owner_id, `name` = @name, `description` = @description, `language` = @language, `license_key` = @license_key, `subscribers_count` = @subscribers_count, `stargazers_count` = @stargazers_count, `forks_count` = @forks_count, `fork` = @fork, `archived` = @archived, `html_url` = @html_url, `api_url` = @api_url, `created_at` = @created_at, `updated_at` = @updated_at, `fetched_at` = @fetched_at, `valid` = @valid;";
-            }
-            else
-            {
-                command.CommandText = "INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
-                    "VALUES (@id, @node_id, @owner_id, @name, @description, @language, @license_key, @subscribers_count, @stargazers_count, @forks_count, @fork, @archived, @html_url, @api_url, @created_at, @updated_at, @parent_id, @source_id, @fetched_at, @valid)" +
-                    "ON DUPLICATE KEY UPDATE `owner_id` = @owner_id, `name` = @name, `description` = @description, `language` = @language, `license_key` = @license_key, `html_url` = @html_url, `api_url` = @api_url, `updated_at` = @updated_at;";
-            }
-
-            command.Parameters.AddWithValue("@id", repo.Id);
-            command.Parameters.AddWithValue("@node_id", repo.NodeId);
-            command.Parameters.AddWithValue("@owner_id", repo.OwnerId);
-            command.Parameters.AddWithValue("@name", repo.Name);
-            command.Parameters.AddWithValue("@description", repo.Description);
-            command.Parameters.AddWithValue("@language", repo.Language);
-            command.Parameters.AddWithValue("@license_key", repo.LicenseKey);
-            command.Parameters.AddWithValue("@subscribers_count", repo.SubscribersCount);
-            command.Parameters.AddWithValue("@stargazers_count", repo.StargazersCount);
-            command.Parameters.AddWithValue("@forks_count", repo.ForksCount);
-            command.Parameters.AddWithValue("@fork", repo.Fork);
-            command.Parameters.AddWithValue("@archived", repo.Archived);
-            command.Parameters.AddWithValue("@html_url", repo.HtmlUrl);
-            command.Parameters.AddWithValue("@api_url", repo.ApiUrl);
-            command.Parameters.AddWithValue("@created_at", repo.CreatedAt);
-            command.Parameters.AddWithValue("@updated_at", repo.UpdatedAt);
-            command.Parameters.AddWithValue("@parent_id", repo.ParentId);
-            command.Parameters.AddWithValue("@source_id", repo.SourceId);
-            command.Parameters.AddWithValue("@fetched_at", repo.FetchedAt);
-            command.Parameters.AddWithValue("@valid", repo.Valid);
-
-            command.ExecuteNonQuery();
-
-            //command.Parameters.Add("@id", MySqlDbType.Int64);
-            //command.Parameters.Add("@node_id", MySqlDbType.VarChar, 64);
-            //command.Parameters.Add("@owner_id", MySqlDbType.Int64);
-            //command.Parameters.Add("@name", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@description", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@language", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@license_key", MySqlDbType.VarChar, 128);
-            //command.Parameters.Add("@subscribers_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@stargazers_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@forks_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@private", MySqlDbType.Bit);
-            //command.Parameters.Add("@fork", MySqlDbType.Bit);
-            //command.Parameters.Add("@archived", MySqlDbType.Bit);
-            //command.Parameters.Add("@html_url", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@api_url", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@created_at", MySqlDbType.DateTime);
-            //command.Parameters.Add("@parent_id", MySqlDbType.Int64);
-            //command.Parameters.Add("@source_id", MySqlDbType.Int64);
-        }
-
-        public Repository Repository_SelectByName(string name)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`repository` WHERE `name` = @name";
-            command.Parameters.AddWithValue("@name", name);
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                if (dataReader.Read())
-                {
-                    return ParseRepository(dataReader);
-                }
-                else
-                {
-                    return null;
-                }
+                return items;
             }
         }
 
-        public Repository Repository_SelectById(long id)
+        public List<RankItem> MostStarOrganization_SelectAll(int limit)
         {
             var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`repository` WHERE `id` = @id";
-            command.Parameters.AddWithValue("@id", id);
-
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                if (dataReader.Read())
-                {
-                    return ParseRepository(dataReader);
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        public List<Repository> Repository_SelectAll(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`repository` LIMIT @limit";
+            command.CommandText = "SELECT * FROM `github_rank`.`most_star_organization` LIMIT @limit";
             command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
 
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("total_star_count"),
+                        Reference = $"/account/organization?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostStarRepository_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_star_repository_with_account` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string repoName = dataReader.GetString("name");
+                    string userLogin = dataReader.GetString("owner_login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = $"{userLogin}/{repoName}",
+                        Score = dataReader.GetInt32("stargazers_count"),
+                        Reference = $"/account/user?login={userLogin}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostForkUser_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_fork_user` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("total_fork_count"),
+                        Reference = $"/account/user?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostForkOrganization_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_fork_organization` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("total_fork_count"),
+                        Reference = $"/account/organization?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostForkRepository_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT repo.*, account.login as owner_login, account.avatar_url " +
+                "FROM `github_rank`.`most_fork_repository` as repo JOIN `github_rank`.`account` as account ON repo.owner_id = account.id " +
+                "ORDER BY repo.forks_count DESC LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("owner_login");
+                    string repoName = dataReader.GetString("name");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = $"{login}/{repoName}",
+                        Score = dataReader.GetInt32("forks_count"),
+                        Reference = $"/account/user?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostRepoUser_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_public_repo_user` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("public_repos"),
+                        Reference = $"/account/user?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostRepoOrganization_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_public_repo_organization` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("public_repos"),
+                        Reference = $"/account/organization?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostFollowerUser_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_follower_user` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("followers"),
+                        Reference = $"/account/user?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<RankItem> MostFollowingUser_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_following_user` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                int rank = 1;
+                var items = new List<RankItem>();
+                while (dataReader.Read())
+                {
+                    string login = dataReader.GetString("login");
+                    items.Add(new RankItem()
+                    {
+                        Rank = rank++,
+                        AvatarUrl = dataReader.GetString("avatar_url"),
+                        Name = login,
+                        Score = dataReader.GetInt32("following"),
+                        Reference = $"/account/user?login={login}"
+                    });
+                }
+                return items;
+            }
+        }
+
+        public List<LanguageModel> MostLanguage_SelectAll(int limit)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_language` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            int rank = 1;
+            var languages = new List<LanguageModel>();
+            while (dataReader.Read())
+            {
+                string name = dataReader.GetString("language");
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                languages.Add(new LanguageModel()
+                {
+                    Rank = rank++,
+                    Name = name,
+                    Score = dataReader.GetInt32("language_count"),
+                });
+            }
+
+            int total = languages.Select(e => e.Score).Sum();
+            foreach (var language in languages)
+            {
+                language.Ratio = language.Score / (double)total * 100;
+            }
+            return languages;
+        }
+
+        public List<LicenseModel> MostLicense_SelectAll(int limit)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`most_license` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            int rank = 1;
+            var licenses = new List<LicenseModel>();
+            while (dataReader.Read())
+            {
+                licenses.Add(new LicenseModel()
+                {
+                    Rank = rank++,
+                    Name = dataReader.GetString("name"),
+                    Score = dataReader.GetInt32("license_count"),
+                });
+            }
+
+            int total = licenses.Select(e => e.Score).Sum();
+            foreach (LicenseModel license in licenses)
+            {
+                license.Ratio = license.Score / (double)total * 100;
+            }
+            return licenses;
+        }
+
+        public User User_SelectByLogin(string login)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`user_account` WHERE `login` = @login;";
+            command.Parameters.AddWithValue("@login", login);
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? ParseUser(dataReader) : null;
+        }
+
+        public Organization Organization_SelectByLogin(string login)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`organization_account` WHERE `login` = @login;";
+            command.Parameters.AddWithValue("@login", login);
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? ParseOrganization(dataReader) : null;
+        }
+
+        public List<Repository> Repositories_SelectAllByOwnerLogin(string login, int limit)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`repository` AS `r` JOIN `github_rank`.`account` AS `a` ON `r`.`owner_id` = `a`.`id` " +
+                "WHERE `a`.`login` = @login ORDER BY `stargazers_count` DESC LIMIT @limit;";
+            command.Parameters.AddWithValue("@login", login);
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
             var repositories = new List<Repository>();
-            using (MySqlDataReader dataReader = command.ExecuteReader())
+            while (dataReader.Read())
             {
-                while (dataReader.Read())
-                {
-                    repositories.Add(ParseRepository(dataReader));
-                }
+                repositories.Add(ParseRepository(dataReader));
             }
             return repositories;
         }
 
-        public List<Repository> Repositories_SelectMostStar(int limit)
+        public int Account_TotalStar(string login)
         {
-            var command = new MySqlCommand();
+            using var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_star_repository` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", limit);
+            command.CommandText = "SELECT sum(r.stargazers_count) AS `total_star_count` FROM `github_rank`.`account` AS `a` JOIN `github_rank`.`repository` AS `r` ON `a`.`id` = `r`.`owner_id` " +
+                "WHERE `a`.`login` = @login GROUP BY `a`.`id`;";
+            command.Parameters.AddWithValue("@login", login);
 
-            var mostStarRepos = new List<Repository>();
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                while (dataReader.Read())
-                {
-                    mostStarRepos.Add(ParseRepository(dataReader));
-                }
-            }
-            return mostStarRepos;
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? dataReader.GetInt32("total_star_count") : 0;
+
         }
 
-        public List<Repository> Repositories_SelectMostSubscriber(int limit)
+        public int Account_TotalFork(string login)
         {
-            var command = new MySqlCommand();
+            using var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_subscriber_repository` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", limit);
+            command.CommandText = "SELECT sum(r.forks_count) AS `total_fork_count` FROM `github_rank`.`account` AS `a` JOIN `github_rank`.`repository` AS `r` ON `a`.`id` = `r`.`owner_id` " +
+                "WHERE `a`.`login` = @login GROUP BY `a`.`id`;";
+            command.Parameters.AddWithValue("@login", login);
 
-            var mostStarRepos = new List<Repository>();
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                while (dataReader.Read())
-                {
-                    mostStarRepos.Add(ParseRepository(dataReader));
-                }
-            }
-            return mostStarRepos;
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? dataReader.GetInt32("total_fork_count") : 0;
+
         }
-
-        public List<Repository> Repositories_SelectMostFork(int limit)
-        {
-            var command = new MySqlCommand();
-            command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`most_fork_repository` LIMIT @limit";
-            command.Parameters.AddWithValue("@limit", limit);
-
-            var mostStarRepos = new List<Repository>();
-            using (MySqlDataReader dataReader = command.ExecuteReader())
-            {
-                while (dataReader.Read())
-                {
-                    mostStarRepos.Add(ParseRepository(dataReader));
-                }
-            }
-            return mostStarRepos;
-        }
-        #endregion
 
         private User ParseUser(MySqlDataReader dataReader)
         {
             return new User(
-                            dataReader.GetInt64("id"), dataReader.GetString("node_id"), (Account.AccountType)dataReader.GetInt32("type_id"), dataReader.GetString("login"),
-                            dataReader.GetInt32("following"), dataReader.GetInt32("followers"), dataReader.GetInt32("public_repos"), dataReader.GetString("avatar_url"),
-                            dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetString("blog_url"), dataReader.GetString("email"),
-                            dataReader.GetString("bio"), dataReader.GetString("company"), dataReader.GetString("location"), dataReader.GetDateTime("created_at"),
-                            dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"), dataReader.GetBoolean("site_admin"), dataReader.GetBoolean("suspended"),
-                            dataReader.GetDateTime("suspended_at"), dataReader.GetDateTime("updated_at"));
+                dataReader.GetInt64("id"), dataReader.GetString("node_id"), (Account.AccountType)dataReader.GetInt32("type_id"), dataReader.GetString("login"),
+                dataReader.GetInt32("following"), dataReader.GetInt32("followers"), dataReader.GetInt32("public_repos"), dataReader.GetString("avatar_url"),
+                dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetString("blog_url"), dataReader.GetString("email"),
+                dataReader.GetString("bio"), dataReader.GetString("company"), dataReader.GetString("location"), dataReader.GetDateTime("created_at"),
+                dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"), dataReader.GetBoolean("site_admin"), dataReader.GetBoolean("suspended"),
+                dataReader.GetDateTime("suspended_at"), dataReader.GetDateTime("updated_at"));
         }
 
         private Organization ParseOrganization(MySqlDataReader dataReader)
         {
             return new Organization(
-                            dataReader.GetInt64("id"), dataReader.GetString("node_id"), (Account.AccountType)dataReader.GetInt32("type_id"), dataReader.GetString("login"),
-                            dataReader.GetInt32("following"), dataReader.GetInt32("followers"), dataReader.GetInt32("public_repos"), dataReader.GetString("avatar_url"),
-                            dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetString("blog_url"), dataReader.GetString("email"),
-                            dataReader.GetString("bio"), dataReader.GetString("company"), dataReader.GetString("location"), dataReader.GetDateTime("created_at"),
-                            dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"));
+                dataReader.GetInt64("id"), dataReader.GetString("node_id"), (Account.AccountType)dataReader.GetInt32("type_id"), dataReader.GetString("login"),
+                dataReader.GetInt32("following"), dataReader.GetInt32("followers"), dataReader.GetInt32("public_repos"), dataReader.GetString("avatar_url"),
+                dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetString("blog_url"), dataReader.GetString("email"),
+                dataReader.GetString("bio"), dataReader.GetString("company"), dataReader.GetString("location"), dataReader.GetDateTime("created_at"),
+                dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"));
         }
 
         private GitHubDataCollector.License ParseLicense(MySqlDataReader dataReader)
@@ -754,7 +654,7 @@ namespace GitHubRankWeb.Core
         {
             return new Repository(
                 dataReader.GetInt64("id"), dataReader.GetString("node_id"), dataReader.GetInt64("owner_id"), dataReader.GetString("name"),
-                dataReader.GetString("description"), dataReader.GetString("language"), dataReader.GetString("license_key"), dataReader.GetInt32("subscribers_count"),
+                dataReader.GetString("description"), dataReader.GetString("language"), dataReader.IsDBNull("license_key") ? null : dataReader.GetString("license_key"), dataReader.GetInt32("subscribers_count"),
                 dataReader.GetInt32("stargazers_count"), dataReader.GetInt32("forks_count"), dataReader.GetBoolean("fork"), dataReader.GetBoolean("archived"),
                 dataReader.GetString("html_url"), dataReader.GetString("api_url"), dataReader.GetDateTime("created_at"), dataReader.GetDateTime("updated_at"),
                 dataReader.GetInt64("parent_id"), dataReader.GetInt64("source_id"), dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"));

@@ -93,8 +93,14 @@ namespace GitHubDataCollector
                 return;
             }
 
-            var o_userRepos = GitHubAPI.Instance.Repositories_GetAllForUser(userLogin);
+            var user = new User(o_user, true);
+            DatabaseManager.Instance.Account_InsertOrUpdate(user);
 
+            var o_userRepos = GitHubAPI.Instance.Repositories_GetAllForUser(userLogin);
+            if (o_userRepos == null)
+            {
+
+            }
         }
 
         public void User_GetAllFollower(int userLimit, int followerLimit)
