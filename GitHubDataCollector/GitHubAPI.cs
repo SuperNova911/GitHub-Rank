@@ -512,6 +512,16 @@ namespace GitHubDataCollector
         }
         #endregion
 
+        public void WaitForNextCoreReset()
+        {
+            if (DateTime.Now < CoreRateLimit.Reset)
+            {
+                TimeSpan delay = CoreRateLimit.Reset - DateTime.Now + TimeSpan.FromMinutes(1);
+                Console.WriteLine($"Wait for next core reset, delay: {delay.Minutes}m:{delay.Seconds}s");
+                Task.Delay(delay).Wait();
+            }
+        }
+
         private void WaitForNextCoreRequest(int delayMultiply = 1)
         {
             if (DateTime.Now - lastCoreRequest < coreRequestDelay * delayMultiply)

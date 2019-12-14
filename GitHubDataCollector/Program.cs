@@ -33,8 +33,8 @@ namespace GitHubDataCollector
             ActionScheduler actionScheduler = new ActionScheduler();
             actionScheduler.UpdateCurrentElementNumber();
 
-            //actionScheduler.CompleteCycle();
-            actionScheduler.RepoUpdateCycle();
+            actionScheduler.CompleteCycle();
+            //actionScheduler.RepoUpdateCycle();
 
             Console.WriteLine("Close DB");
             DatabaseManager.Instance.CloseDB();

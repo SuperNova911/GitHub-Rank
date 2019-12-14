@@ -26,7 +26,7 @@ namespace GitHubDataCollector
         public ActionScheduler()
         {
             CreateSettingFile(settingFilePath);
-            ReadSetting(settingFilePath);
+            ReadSettings(settingFilePath);
 
             ActionSet = new ActionSet();
         }
@@ -40,19 +40,67 @@ namespace GitHubDataCollector
 
         public void CompleteCycle()
         {
-            Console.WriteLine();
-            Console.WriteLine($"{nameof(ActionScheduler)} complete cycle start, {DateTime.Now}");
-            GitHubAPI.Instance.PrintCurrentRateLimit();
-            Console.WriteLine();
+            while (true)
+            {
+                Console.WriteLine($"{nameof(ActionScheduler)} complete cycle start, {DateTime.Now}");
+                PrintCurrentProgress();
+                Console.WriteLine();
 
-            GetFollowers();
-            UpdateAccountRepository();
-            UpdateInvalidAccounts();
+                ReadSettings(settingFilePath);
 
-            Console.WriteLine();
-            Console.WriteLine($"End of complete cycle, {DateTime.Now}");
-            GitHubAPI.Instance.PrintCurrentRateLimit();
-            Console.WriteLine();
+                bool follower = false;
+                bool updateRepo = false;
+                bool updateInvalid = false;
+                while (follower == false || updateRepo == false || updateInvalid == false)
+                {
+                    if (follower == false)
+                    {
+                        CurrentUserNumber = DatabaseManager.Instance.User_Count();
+                        if (CurrentUserNumber < TargetUserNumber)
+                        {
+                            GetFollowers();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Reach {nameof(TargetUserNumber)}, current: {CurrentUserNumber}");
+                            follower = true;
+                        }
+                    }
+
+                    if (updateRepo == false)
+                    {
+                        CurrentRepositoryNumber = DatabaseManager.Instance.Repository_Count();
+                        if (CurrentRepositoryNumber < TargetRepositoryNumber)
+                        {
+                            UpdateAccountRepository();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Reach {nameof(TargetRepositoryNumber)}, current: {CurrentRepositoryNumber}");
+                            updateRepo = true;
+                        }
+                    }
+
+                    if (updateInvalid == false)
+                    {
+                        int invalidAccountNumber = DatabaseManager.Instance.Account_CountInvalid();
+                        if (invalidAccountNumber > 0)
+                        {
+                            UpdateInvalidAccounts();
+                        }
+                        else
+                        {
+                            updateInvalid = true;
+                        }
+                    }
+                }
+
+                Console.WriteLine($"End of complete cycle, {DateTime.Now}");
+                PrintCurrentProgress();
+                Console.WriteLine();
+
+                GitHubAPI.Instance.WaitForNextCoreReset();
+            }
         }
 
         public void RepoUpdateCycle()
@@ -132,6 +180,14 @@ namespace GitHubDataCollector
             ActionSet.User_UpdateInvalid(coreMargin, 100);
         }
 
+        private void PrintCurrentProgress()
+        {
+            Console.WriteLine($"User {CurrentUserNumber}/{TargetUserNumber}");
+            Console.WriteLine($"Organization {CurrentOrganizationNumber}/{TargetOrganizationNumber}");
+            Console.WriteLine($"Repository {CurrentRepositoryNumber}/{TargetRepositoryNumber}");
+            Console.WriteLine($"Core {GitHubAPI.Instance.CoreRateLimit.Remaining}/{TargetGitHubApiCoreRemain}, Search {GitHubAPI.Instance.SearchRateLimit.Remaining}/{TargetGitHubApiSearchRemain}");
+        }
+
         private void CreateSettingFile(string filePath)
         {
             try
@@ -156,7 +212,7 @@ namespace GitHubDataCollector
             }
         }
 
-        private void ReadSetting(string filePath)
+        private void ReadSettings(string filePath)
         {
             try
             {

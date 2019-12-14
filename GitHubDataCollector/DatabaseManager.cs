@@ -276,6 +276,16 @@ namespace GitHubDataCollector
             }
         }
 
+        public int Account_CountInvalid()
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT count(*) AS `invalid_account_count` FROM `github_rank`.`account` WHERE `valid` = FALSE;";
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? dataReader.GetInt32("invalid_account_count") : 0;
+        }
+
         public List<long> AccountId_SelectAll(int limit)
         {
             var command = new MySqlCommand();
@@ -348,7 +358,7 @@ namespace GitHubDataCollector
         {
             var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_user` LIMIT @limit";
+            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_user` ORDER BY `fetched_public_repo_count` ASC LIMIT @limit";
             command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
 
             using (MySqlDataReader dataReader = command.ExecuteReader())
@@ -388,7 +398,7 @@ namespace GitHubDataCollector
         {
             var command = new MySqlCommand();
             command.Connection = connection;
-            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_organization` LIMIT @limit";
+            command.CommandText = "SELECT * FROM `github_rank`.`need_repo_update_organization` ORDER BY `fetched_public_repo_count` ASC LIMIT @limit";
             command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
 
             using (MySqlDataReader dataReader = command.ExecuteReader())
