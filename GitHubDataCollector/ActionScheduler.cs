@@ -53,12 +53,6 @@ namespace GitHubDataCollector
                 bool updateInvalid = false;
                 while (follower == false || updateRepo == false || updateInvalid == false)
                 {
-                    if (GitHubAPI.Instance.CoreRateLimit.Remaining < TargetGitHubApiCoreRemain)
-                    {
-                        Console.WriteLine($"Reach {nameof(TargetGitHubApiCoreRemain)}, current: {GitHubAPI.Instance.CoreRateLimit}");
-                        break;
-                    }
-
                     if (follower == false)
                     {
                         CurrentUserNumber = DatabaseManager.Instance.User_Count();
@@ -99,12 +93,19 @@ namespace GitHubDataCollector
                             updateInvalid = true;
                         }
                     }
+
+                    if (GitHubAPI.Instance.CoreRateLimit.Remaining < TargetGitHubApiCoreRemain)
+                    {
+                        Console.WriteLine($"Reach {nameof(TargetGitHubApiCoreRemain)}, current: {GitHubAPI.Instance.CoreRateLimit.Remaining}");
+                        break;
+                    }
                 }
 
                 Console.WriteLine($"End of complete cycle, {DateTime.Now}");
                 PrintCurrentProgress();
                 Console.WriteLine();
 
+                GitHubAPI.Instance.PrintCurrentRateLimit();
                 GitHubAPI.Instance.WaitForNextCoreReset();
             }
         }
