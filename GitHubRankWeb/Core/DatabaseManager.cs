@@ -1,4 +1,4 @@
-﻿using GitHub_Data_Collector;
+﻿using GitHubDataCollector;
 using GitHubRankWeb.Models;
 using MySql.Data.MySqlClient;
 using System;
@@ -512,7 +512,7 @@ namespace GitHubRankWeb.Core
         #endregion
 
         #region License
-        public void Lisence_InsertOrUpdate(GitHub_Data_Collector.License license)
+        public void Lisence_InsertOrUpdate(GitHubDataCollector.License license)
         {
             var command = new MySqlCommand();
             command.CommandText = "INSERT INTO `github_rank`.`license` (`key`, `node_id`, `name`, `spdx_id`, `api_url`) " +
@@ -529,7 +529,7 @@ namespace GitHubRankWeb.Core
             command.ExecuteNonQuery();
         }
 
-        public List<GitHub_Data_Collector.License> License_SelectAll(int limit)
+        public List<GitHubDataCollector.License> License_SelectAll(int limit)
         {
             var command = new MySqlCommand();
             command.CommandText = "SELECT * FROM `github_rank`.`license` LIMIT @limit";
@@ -538,7 +538,7 @@ namespace GitHubRankWeb.Core
 
             using (MySqlDataReader dataReader = command.ExecuteReader())
             {
-                var licenses = new List<GitHub_Data_Collector.License>();
+                var licenses = new List<GitHubDataCollector.License>();
                 while (dataReader.Read())
                 {
                     licenses.Add(ParseLicense(dataReader));
@@ -743,9 +743,9 @@ namespace GitHubRankWeb.Core
                             dataReader.GetDateTime("fetched_at"), dataReader.GetBoolean("valid"));
         }
 
-        private GitHub_Data_Collector.License ParseLicense(MySqlDataReader dataReader)
+        private GitHubDataCollector.License ParseLicense(MySqlDataReader dataReader)
         {
-            return new GitHub_Data_Collector.License(
+            return new GitHubDataCollector.License(
                 dataReader.GetString("key"), dataReader.GetString("node_id"), dataReader.GetString("name"),
                 dataReader.GetString("spdx_id"), dataReader.GetString("api_url"));
         }

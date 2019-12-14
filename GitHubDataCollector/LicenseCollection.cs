@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public class LicenseCollection
     {

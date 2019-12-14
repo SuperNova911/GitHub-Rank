@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public class Program
     {
@@ -27,11 +27,14 @@ namespace GitHub_Data_Collector
             Console.WriteLine("Init GitHub API");
             GitHubAPI.Instance.InitializeGitHubClient(new Credentials(token));
 
+            AccountCollection.Instance.UpdateIdFromDB();
             LicenseCollection.Instance.UpdateCollectionFromDB();
-            ActionSet actionSet = new ActionSet();
 
-            GitHubAPI.Instance.Test();
-            //actionSet.Repository_UpdateOrgsRepo(600);
+            ActionScheduler actionScheduler = new ActionScheduler();
+            actionScheduler.UpdateCurrentElementNumber();
+
+            //actionScheduler.CompleteCycle();
+            actionScheduler.RepoUpdateCycle();
 
             Console.WriteLine("Close DB");
             DatabaseManager.Instance.CloseDB();
@@ -44,6 +47,7 @@ namespace GitHub_Data_Collector
             databaseName = secrets[1];
             userId = secrets[2];
             password = secrets[3];
+            token = secrets[4];
         }
     }
 }

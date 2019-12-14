@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Threading;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public class GitHubAPI
     {
-        private readonly TimeSpan coreRequestDelay = TimeSpan.FromSeconds(1);
-        private readonly TimeSpan searchRequestDelay = TimeSpan.FromSeconds(2);
+        private readonly TimeSpan coreRequestDelay = TimeSpan.FromSeconds(0.3);
+        private readonly TimeSpan searchRequestDelay = TimeSpan.FromSeconds(60 / 60);
         private readonly int maximumRequestRetry = 3;
         private DateTime lastCoreRequest = DateTime.MinValue;
         private DateTime lastSearchRequest = DateTime.MinValue;
@@ -51,11 +51,13 @@ namespace GitHub_Data_Collector
             gitHubClient = new GitHubClient(new ProductHeaderValue("GitHub-Rank"));
             gitHubClient.Credentials = credentials;
 
-            var limit = gitHubClient.Miscellaneous.GetRateLimits().Result;
-            Console.WriteLine($"Core {limit.Resources.Core.Remaining}/{limit.Resources.Core.Limit} Reset: {limit.Resources.Core.Reset.LocalDateTime}");
-            Console.WriteLine($"Search {limit.Resources.Search.Remaining}/{limit.Resources.Search.Limit} Reset: {limit.Resources.Search.Reset.LocalDateTime}");
-            CoreRateLimit = limit.Resources.Core;
-            SearchRateLimit = limit.Resources.Search;
+            var user = gitHubClient.User.Current().Result;
+            CoreRateLimit = gitHubClient.GetLastApiInfo().RateLimit;
+            var searchResult = gitHubClient.Search.SearchUsers(new SearchUsersRequest(user.Login)).Result;
+            SearchRateLimit = gitHubClient.GetLastApiInfo().RateLimit;
+
+            Console.WriteLine($"Credential: {user.Login}");
+            PrintCurrentRateLimit();
             lastCoreRequest = DateTime.Now;
             lastSearchRequest = DateTime.Now;
         }
@@ -85,6 +87,12 @@ namespace GitHub_Data_Collector
             Console.WriteLine("Kappa");
         }
 
+        public void PrintCurrentRateLimit()
+        {
+            Console.WriteLine($"Core {CoreRateLimit.Remaining}/{CoreRateLimit.Limit} Reset: {CoreRateLimit.Reset.LocalDateTime}");
+            Console.WriteLine($"Search {SearchRateLimit.Remaining}/{SearchRateLimit.Limit} Reset: {SearchRateLimit.Reset.LocalDateTime}");
+        }
+
         #region Account
         public Octokit.User User_GetByLogin(string userLogin)
         {
@@ -108,18 +116,72 @@ namespace GitHub_Data_Collector
 
         public Octokit.User[] Users_GetByLogin(IEnumerable<string> userLogins)
         {
-            WaitForNextCoreRequest(2);
+            WaitForNextCoreRequest(userLogins.Count() / 10);
 
             for (int tryCount = 1; tryCount <= maximumRequestRetry; tryCount++)
             {
                 try
                 {
                     lastCoreRequest = DateTime.Now;
-                    IEnumerable<Task<Octokit.User>> tasks = userLogins.Select(userLogin => gitHubClient.User.Get(userLogin));
+                    IEnumerable<Task<Octokit.User>> tasks = userLogins.Select(login => gitHubClient.User.Get(login));
                     var result = Task.WhenAll(tasks).Result;
 
                     CoreRateLimit = gitHubClient.GetLastApiInfo().RateLimit;
                     return result;
+                }
+                catch (AggregateException ae)
+                {
+                    HandleAggregateExceptionForCore(tryCount, ae);
+                }
+            }
+
+            return null;
+        }
+
+        public IReadOnlyList<Octokit.User> Users_GetAllFollower(string userLogin, int pageLimit, int startPage = 1)
+        {
+            WaitForNextCoreRequest();
+
+            for (int tryCount = 1; tryCount < maximumRequestRetry; tryCount++)
+            {
+                try
+                {
+                    lastCoreRequest = DateTime.Now;
+                    var o_followers = gitHubClient.User.Followers.GetAll(userLogin, new ApiOptions
+                    {
+                        PageCount = pageLimit,
+                        PageSize = 100
+                    }).Result;
+                    CoreRateLimit = gitHubClient.GetLastApiInfo().RateLimit;
+
+                    return o_followers;
+                }
+                catch (AggregateException ae)
+                {
+                    HandleAggregateExceptionForCore(tryCount, ae);
+                }
+            }
+
+            return null;
+        }
+
+        public IReadOnlyList<Octokit.User> Users_GetAllFollowing(string userLogin, int pageLimit = 10)
+        {
+            WaitForNextCoreRequest();
+
+            for (int tryCount = 1; tryCount < maximumRequestRetry; tryCount++)
+            {
+                try
+                {
+                    lastCoreRequest = DateTime.Now;
+                    var o_followers = gitHubClient.User.Followers.GetAllFollowing(userLogin, new ApiOptions
+                    {
+                        PageCount = pageLimit,
+                        PageSize = 100
+                    }).Result;
+                    CoreRateLimit = gitHubClient.GetLastApiInfo().RateLimit;
+
+                    return o_followers;
                 }
                 catch (AggregateException ae)
                 {
@@ -352,7 +414,7 @@ namespace GitHub_Data_Collector
             return null;
         }
 
-        public IReadOnlyList<Octokit.Repository> Repositories_GetAllForOrg(string orgLogin, int pageLimit = 10)
+        public IReadOnlyList<Octokit.Repository> Repositories_GetAllForOrg(string orgLogin, int pageLimit)
         {
             for (int tryCount = 1; tryCount <= maximumRequestRetry; tryCount++)
             {
@@ -454,7 +516,12 @@ namespace GitHub_Data_Collector
         {
             if (DateTime.Now - lastCoreRequest < coreRequestDelay * delayMultiply)
             {
-                Task.Delay((coreRequestDelay * delayMultiply) - (DateTime.Now - lastCoreRequest)).Wait();
+                TimeSpan delay = (coreRequestDelay * delayMultiply) - (DateTime.Now - lastCoreRequest);
+                if (delay > TimeSpan.FromSeconds(1))
+                {
+                    Console.WriteLine($"Wait for next core request, delay: {delay.TotalSeconds}s");
+                }
+                Task.Delay(delay).Wait();
             }
         }
 
@@ -462,7 +529,12 @@ namespace GitHub_Data_Collector
         {
             if (DateTime.Now - lastSearchRequest < searchRequestDelay * delayMultiply)
             {
-                Task.Delay((searchRequestDelay * delayMultiply) - (DateTime.Now - lastSearchRequest)).Wait();
+                TimeSpan delay = (searchRequestDelay * delayMultiply) - (DateTime.Now - lastSearchRequest);
+                if (delay > TimeSpan.FromSeconds(1))
+                {
+                    Console.WriteLine($"Wait for next search request, delay: {delay.TotalSeconds}s");
+                }
+                Task.Delay(delay).Wait();
             }
         }
 

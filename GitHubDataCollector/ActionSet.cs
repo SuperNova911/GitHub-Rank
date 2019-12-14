@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public class ActionSet
     {
@@ -31,24 +31,47 @@ namespace GitHub_Data_Collector
             }
         }
 
-        public void User_UpdateInvalid(int limit)
+        public void User_UpdateInvalid(int limit, int parallelSize)
         {
+            Console.WriteLine($"Update invalid users, {nameof(limit)}: {Math.Max(limit, 0)}");
             var updatedUsers = new List<User>();
             try
             {
-                Console.WriteLine($"Load invalid users, limit: {limit}");
-                List<User> invalidUsers = DatabaseManager.Instance.User_SelectInvalidAll(limit);
-                foreach (User user in invalidUsers)
+                List<string> userLogins = DatabaseManager.Instance.UserLogin_SelectInvalidAll(limit);
+                if (userLogins.Count == 0)
                 {
-                    Console.WriteLine($"Get user: {user.Login}");
-                    Octokit.User o_user = GitHubAPI.Instance.User_GetByLogin(user.Login);
-                    if (o_user == null)
-                    {
-                        Console.WriteLine($"Get result is null, skip user: {user.Login}");
-                        continue;
-                    }
+                    return;
+                }
 
-                    updatedUsers.Add(new User(o_user, true));
+                if (parallelSize > 1)
+                {
+                    foreach (List<string> logins in userLogins.Split(parallelSize))
+                    {
+                        Console.WriteLine($"Get {logins.Count} users");
+                        Octokit.User[] o_users = GitHubAPI.Instance.Users_GetByLogin(logins);
+                        if (o_users == null)
+                        {
+                            Console.WriteLine($"Get result is null, skip {logins.Count} users");
+                            continue;
+                        }
+
+                        updatedUsers.AddRange(o_users.Select(o_user => new User(o_user, true)));
+                    }
+                }
+                else
+                {
+                    foreach (string login in userLogins)
+                    {
+                        Console.WriteLine($"Get user: {login}");
+                        Octokit.User o_user = GitHubAPI.Instance.User_GetByLogin(login);
+                        if (o_user == null)
+                        {
+                            Console.WriteLine($"Get result is null, skip user: {login}");
+                            continue;
+                        }
+
+                        updatedUsers.Add(new User(o_user, true));
+                    }
                 }
             }
             catch (Exception e)
@@ -57,11 +80,8 @@ namespace GitHub_Data_Collector
                 Console.WriteLine(e);
             }
 
-            Console.WriteLine("Save updated users to DB");
-            foreach (User user in updatedUsers)
-            {
-                DatabaseManager.Instance.Account_InsertOrUpdate(user);
-            }
+            Console.WriteLine($"Save updated users to DB, count: {updatedUsers.Count}");
+            DatabaseManager.Instance.User_InsertOrUpdate(updatedUsers);
         }
 
         public void User_Fetch(string userLogin)
@@ -77,13 +97,43 @@ namespace GitHub_Data_Collector
 
         }
 
+        public void User_GetAllFollower(int userLimit, int followerLimit)
+        {
+            Console.WriteLine($"Get users follower, {nameof(userLimit)}: {userLimit}, {nameof(followerLimit)}: {followerLimit}");
+            List<string> userLogins = DatabaseManager.Instance.UserLogin_SelectNeedFollowerSearch(userLimit);
+            foreach (string userLogin in userLogins)
+            {
+                Console.Write($"Get all followers for user: {userLogin}\t");
+                var o_followers = GitHubAPI.Instance.Users_GetAllFollower(userLogin, followerLimit, 1);
+                if (o_followers == null)
+                {
+                    continue;
+                }
+
+                List<User> followers = o_followers
+                    .Where(o_user => AccountCollection.Instance.AccountIds.Contains(o_user.Id) == false)
+                    .Select(o_user => new User(o_user, false))
+                    .ToList();
+
+                Console.WriteLine($"Save {o_followers.Count} followers");
+                DatabaseManager.Instance.User_InsertOrUpdate(followers);
+                DatabaseManager.Instance.UserLogin_MarkFollowerSearched(userLogin, followers.Count);
+            }
+        }
+
         public void Organization_UpdateInvalid(int limit)
         {
+            Console.WriteLine($"Update invalid organizations, {nameof(limit)}: {limit}");
             var updatedOrgs = new List<Organization>();
+
             try
             {
-                Console.WriteLine($"Load invalid organizations, limit: {limit}");
                 List<Organization> invalidOrgs = DatabaseManager.Instance.Organization_SelectInvalidAll(limit);
+                if (invalidOrgs.Count == 0)
+                {
+                    return;
+                }
+
                 foreach (Organization org in invalidOrgs)
                 {
                     Console.WriteLine($"Get organization: {org.Login}");
@@ -103,11 +153,8 @@ namespace GitHub_Data_Collector
                 Console.WriteLine(e);
             }
 
-            Console.WriteLine("Save updated organizations to DB");
-            foreach (Organization org in updatedOrgs)
-            {
-                DatabaseManager.Instance.Account_InsertOrUpdate(org);
-            }
+            Console.WriteLine($"Save updated organizations to DB, count: {updatedOrgs.Count}");
+            DatabaseManager.Instance.Organization_InsertOrUpdate(updatedOrgs);
         }
 
         public void Organization_SearchMostRepo(int pageFrom, int pageTo)
@@ -313,70 +360,41 @@ namespace GitHub_Data_Collector
             }
         }
 
-        public void Repository_UpdateUsersRepo(int limit)
+        public void Repository_UpdateUsersRepo(int limit, int pageLimit)
         {
-            Console.WriteLine("Load userLogins need repo update\n");
-            List<string> userLogins = DatabaseManager.Instance.UserLogin_SelectNeedRepoUpdate(limit);
+            Console.WriteLine($"Update users repository, {nameof(limit)}: {limit}, {nameof(pageLimit)}: {pageLimit}");
+            List<string> userLogins = DatabaseManager.Instance.UserLogin_SelectNeedRepoUpdate(limit, pageLimit * 100);
             foreach (string userLogin in userLogins)
             {
-                Console.WriteLine($"Get all repos for user: {userLogin}");
-                IReadOnlyList<Octokit.Repository> o_repos = GitHubAPI.Instance.Repositories_GetAllForUser(userLogin);
+                Console.Write($"Get all repos for user: {userLogin}\t");
+                IReadOnlyList<Octokit.Repository> o_repos = GitHubAPI.Instance.Repositories_GetAllForUser(userLogin, pageLimit);
                 if (o_repos == null)
                 {
                     Console.WriteLine($"Get result is empty, skip user: {userLogin}");
                     continue;
                 }
 
-                Console.WriteLine($"Fetched {o_repos.Count} repos\n");
-                foreach (Repository repo in o_repos.Select(o_repo => new Repository(o_repo, true)))
-                {
-                    DatabaseManager.Instance.Repository_InsertOrUpdate(repo);
-                }
+                Console.WriteLine($"Fetched {o_repos.Count} repos");
+                DatabaseManager.Instance.Repository_InsertOrUpdate(o_repos.Select(o_repo => new Repository(o_repo, true)).ToList());
             }
         }
 
-        public void Repository_UpdateOrgsRepo(int limit)
+        public void Repository_UpdateOrgsRepo(int limit, int pageLimit)
         {
-            Console.WriteLine("Load organizationLogins need repo update\n");
-            List<string> orgLogins = DatabaseManager.Instance.OrganizationLogin_SelectNeedRepoUpdate(limit);
+            Console.WriteLine($"Update organizations repository, {nameof(limit)}: {limit}, {nameof(pageLimit)}: {pageLimit}");
+            List<string> orgLogins = DatabaseManager.Instance.OrganizationLogin_SelectNeedRepoUpdate(limit, pageLimit * 100);
             foreach (string orgLogin in orgLogins)
             {
-                Console.WriteLine($"Get all repos for organization: {orgLogin}");
-                IReadOnlyList<Octokit.Repository> o_repos = GitHubAPI.Instance.Repositories_GetAllForOrg(orgLogin);
+                Console.Write($"Get all repos for organization: {orgLogin}\t");
+                IReadOnlyList<Octokit.Repository> o_repos = GitHubAPI.Instance.Repositories_GetAllForOrg(orgLogin, pageLimit);
                 if (o_repos == null)
                 {
                     Console.WriteLine($"Get result is empty, skip organization: {orgLogin}");
                     continue;
                 }
 
-                Console.WriteLine($"Fetched {o_repos.Count} repos\n");
-                foreach (Repository repo in o_repos.Select(o_repo => new Repository(o_repo, true)))
-                {
-                    DatabaseManager.Instance.Repository_InsertOrUpdate(repo);
-                }
-            }
-        }
-
-        public void Repository_UpdateUsersRepoV2(int limit)
-        {
-            Console.WriteLine("Load userLogins need repo update\n");
-            List<string> userLogins = DatabaseManager.Instance.UserLogin_SelectNeedRepoUpdate(limit);
-
-            Console.WriteLine($"Get all repos for users");
-            IReadOnlyList<Octokit.Repository>[] o_reposList = GitHubAPI.Instance.Repositories_GetAllForUser(userLogins);
-            if (o_reposList == null)
-            {
-                Console.WriteLine($"Get result is empty");
-                return;
-            }
-
-            foreach (IReadOnlyList<Octokit.Repository> o_repos in o_reposList)
-            {
-                Console.WriteLine($"Fetched {o_repos.Count} repos\n");
-                foreach (Repository repo in o_repos.Select(o_repo => new Repository(o_repo, true)))
-                {
-                    DatabaseManager.Instance.Repository_InsertOrUpdate(repo);
-                }
+                Console.WriteLine($"Fetched {o_repos.Count} repos");
+                DatabaseManager.Instance.Repository_InsertOrUpdate(o_repos.Select(o_repo => new Repository(o_repo, true)).ToList());
             }
         }
     }

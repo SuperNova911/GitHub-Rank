@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public sealed class License : IEquatable<License>
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public sealed class Organization : Account
     {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Text;
 
-namespace GitHub_Data_Collector
+namespace GitHubDataCollector
 {
     public class DatabaseManager
     {
@@ -123,7 +123,178 @@ namespace GitHub_Data_Collector
             }
         }
 
-        public List<User> User_SelectInvalidAll(int limit)
+        public void User_InsertOrUpdate(List<User> users)
+        {
+            if (users == null || users.Count == 0)
+            {
+                return;
+            }
+
+            foreach (List<User> splitedUsers in users.Split(100))
+            {
+                using var command = new MySqlCommand();
+                command.Connection = connection;
+
+                var commandText = new StringBuilder();
+                for (int i = 0; i < splitedUsers.Count; i++)
+                {
+                    User user = splitedUsers[i];
+                    if (user.Valid)
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`account` (`id`, `node_id`, `type_id`, `login`, `following`, `followers`, `public_repos`, `avatar_url`, `html_url`, `api_url`, `blog_url`, `email`, `bio`, `company`, `location`, `created_at`, `fetched_at`, `valid`) " +
+                            $"VALUES (@id{i}, @node_id{i}, @type_id{i}, @login{i}, @following{i}, @followers{i}, @public_repos{i}, @avatar_url{i}, @html_url{i}, @api_url{i}, @blog_url{i}, @email{i}, @bio{i}, @company{i}, @location{i}, @created_at{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `type_id` = @type_id{i}, `login` = @login{i}, `following` = @following{i}, `followers` = @followers{i}, `public_repos` = @public_repos{i}, `avatar_url` = @avatar_url{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `blog_url` = @blog_url{i}, `email` = @email{i}, `bio` = @bio{i}, `company` = @company{i}, `location` = @location{i}, `created_at` = @created_at{i}, `fetched_at` = @fetched_at{i}, `valid` = @valid{i};" +
+                            "INSERT INTO `github_rank`.`user` (`account_id`, `site_admin`, `suspended`, `suspended_at`, `updated_at`) " +
+                            $"VALUES (@account_id{i}, @site_admin{i}, @suspended{i}, @suspended_at{i}, @updated_at{i})" +
+                            $"ON DUPLICATE KEY UPDATE `site_admin` = @site_admin{i}, `suspended` = @suspended{i}, `suspended_at` = @suspended_at{i}, `updated_at` = @updated_at{i};");
+                    }
+                    else
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`account` (`id`, `node_id`, `type_id`, `login`, `following`, `followers`, `public_repos`, `avatar_url`, `html_url`, `api_url`, `blog_url`, `email`, `bio`, `company`, `location`, `created_at`, `fetched_at`, `valid`) " +
+                            $"VALUES (@id{i}, @node_id{i}, @type_id{i}, @login{i}, @following{i}, @followers{i}, @public_repos{i}, @avatar_url{i}, @html_url{i}, @api_url{i}, @blog_url{i}, @email{i}, @bio{i}, @company{i}, @location{i}, @created_at{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `type_id` = @type_id{i}, `login` = @login{i}, `avatar_url` = @avatar_url{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i};" +
+                            "INSERT INTO `github_rank`.`user` (`account_id`, `site_admin`, `suspended`, `suspended_at`, `updated_at`) " +
+                            $"VALUES (@account_id{i}, @site_admin{i}, @suspended{i}, @suspended_at{i}, @updated_at{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `account_id` = @account_id{i};");
+                    }
+
+                    command.Parameters.AddWithValue($"@id{i}", user.Id);
+                    command.Parameters.AddWithValue($"@node_id{i}", user.NodeId);
+                    command.Parameters.AddWithValue($"@type_id{i}", user.TypeId);
+                    command.Parameters.AddWithValue($"@login{i}", user.Login);
+                    command.Parameters.AddWithValue($"@following{i}", user.Following);
+                    command.Parameters.AddWithValue($"@followers{i}", user.Followers);
+                    command.Parameters.AddWithValue($"@public_repos{i}", user.PublicRepos);
+                    command.Parameters.AddWithValue($"@avatar_url{i}", user.AvatarUrl);
+                    command.Parameters.AddWithValue($"@html_url{i}", user.HtmlUrl);
+                    command.Parameters.AddWithValue($"@api_url{i}", user.ApiUrl);
+                    command.Parameters.AddWithValue($"@blog_url{i}", user.BlogUrl);
+                    command.Parameters.AddWithValue($"@email{i}", user.Email);
+                    command.Parameters.AddWithValue($"@bio{i}", user.Bio);
+                    command.Parameters.AddWithValue($"@company{i}", user.Company);
+                    command.Parameters.AddWithValue($"@location{i}", user.Location);
+                    command.Parameters.AddWithValue($"@created_at{i}", user.CreatedAt);
+                    command.Parameters.AddWithValue($"@fetched_at{i}", user.FetchedAt);
+                    command.Parameters.AddWithValue($"@valid{i}", user.Valid);
+
+                    command.Parameters.AddWithValue($"@account_id{i}", user.Id);
+                    command.Parameters.AddWithValue($"@site_admin{i}", user.SiteAdmin);
+                    command.Parameters.AddWithValue($"@suspended{i}", user.Suspended);
+                    command.Parameters.AddWithValue($"@suspended_at{i}", user.SuspendedAt);
+                    command.Parameters.AddWithValue($"@updated_at{i}", user.UpdatedAt);
+                }
+                command.CommandText = commandText.ToString();
+
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Organization_InsertOrUpdate(List<Organization> organizations)
+        {
+            if (organizations == null || organizations.Count == 0)
+            {
+                return;
+            }
+
+            foreach (List<Organization> orgs in organizations.Split(100))
+            {
+                using var command = new MySqlCommand();
+                command.Connection = connection;
+
+                var commandText = new StringBuilder();
+                for (int i = 0; i < orgs.Count; i++)
+                {
+                    var organization = orgs[i];
+                    if (organization.Valid)
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`account` (`id`, `node_id`, `type_id`, `login`, `following`, `followers`, `public_repos`, `avatar_url`, `html_url`, `api_url`, `blog_url`, `email`, `bio`, `company`, `location`, `created_at`, `fetched_at`, `valid`) " +
+                            $"VALUES (@id{i}, @node_id{i}, @type_id{i}, @login{i}, @following{i}, @followers{i}, @public_repos{i}, @avatar_url{i}, @html_url{i}, @api_url{i}, @blog_url{i}, @email{i}, @bio{i}, @company{i}, @location{i}, @created_at{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `type_id` = @type_id{i}, `login` = @login{i}, `following` = @following{i}, `followers` = @followers{i}, `public_repos` = @public_repos{i}, `avatar_url` = @avatar_url{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `blog_url` = @blog_url{i}, `email` = @email{i}, `bio` = @bio{i}, `company` = @company{i}, `location` = @location{i}, `created_at` = @created_at{i}, `fetched_at` = @fetched_at{i}, `valid` = @valid{i};");
+                    }
+                    else
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`account` (`id`, `node_id`, `type_id`, `login`, `following`, `followers`, `public_repos`, `avatar_url`, `html_url`, `api_url`, `blog_url`, `email`, `bio`, `company`, `location`, `created_at`, `fetched_at`, `valid`) " +
+                            $"VALUES (@id{i}, @node_id{i}, @type_id{i}, @login{i}, @following{i}, @followers{i}, @public_repos{i}, @avatar_url{i}, @html_url{i}, @api_url{i}, @blog_url{i}, @email{i}, @bio{i}, @company{i}, @location{i}, @created_at{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `type_id` = @type_id{i}, `login` = @login{i}, `avatar_url` = @avatar_url{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i};");
+                    }
+                    commandText.Append("INSERT INTO `github_rank`.`organization` (`account_id`) " +
+                        $"VALUES (@account_id{i}) " +
+                        $"ON DUPLICATE KEY UPDATE `account_id` = @account_id{i};");
+
+                    command.Parameters.AddWithValue($"@id{i}", organization.Id);
+                    command.Parameters.AddWithValue($"@node_id{i}", organization.NodeId);
+                    command.Parameters.AddWithValue($"@type_id{i}", organization.TypeId);
+                    command.Parameters.AddWithValue($"@login{i}", organization.Login);
+                    command.Parameters.AddWithValue($"@following{i}", organization.Following);
+                    command.Parameters.AddWithValue($"@followers{i}", organization.Followers);
+                    command.Parameters.AddWithValue($"@public_repos{i}", organization.PublicRepos);
+                    command.Parameters.AddWithValue($"@avatar_url{i}", organization.AvatarUrl);
+                    command.Parameters.AddWithValue($"@html_url{i}", organization.HtmlUrl);
+                    command.Parameters.AddWithValue($"@api_url{i}", organization.ApiUrl);
+                    command.Parameters.AddWithValue($"@blog_url{i}", organization.BlogUrl);
+                    command.Parameters.AddWithValue($"@email{i}", organization.Email);
+                    command.Parameters.AddWithValue($"@bio{i}", organization.Bio);
+                    command.Parameters.AddWithValue($"@company{i}", organization.Company);
+                    command.Parameters.AddWithValue($"@location{i}", organization.Location);
+                    command.Parameters.AddWithValue($"@created_at{i}", organization.CreatedAt);
+                    command.Parameters.AddWithValue($"@fetched_at{i}", organization.FetchedAt);
+                    command.Parameters.AddWithValue($"@valid{i}", organization.Valid);
+
+                    command.Parameters.AddWithValue($"@account_id{i}", organization.Id);
+                }
+                command.CommandText = commandText.ToString();
+
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public int User_Count()
+        {
+            using (var command = new MySqlCommand())
+            {
+                command.Connection = connection;
+                command.CommandText = "SELECT count(*) AS `user_count` FROM `github_rank`.`account` WHERE `type_id` = 0;";
+                
+                using (MySqlDataReader dataReader = command.ExecuteReader())
+                {
+                    return dataReader.Read() ? dataReader.GetInt32("user_count") : 0;
+                }
+            }
+        }
+
+        public int Organization_Count()
+        {
+            using (var command = new MySqlCommand())
+            {
+                command.Connection = connection;
+                command.CommandText = "SELECT count(*) AS `organization_count` FROM `github_rank`.`account` WHERE `type_id` = 1;";
+
+                using (MySqlDataReader dataReader = command.ExecuteReader())
+                {
+                    return dataReader.Read() ? dataReader.GetInt32("organization_count") : 0;
+                }
+            }
+        }
+
+        public List<long> AccountId_SelectAll(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`account` WHERE `valid` = TRUE LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                var ids = new List<long>();
+                while (dataReader.Read())
+                {
+                    ids.Add(dataReader.GetInt64("id"));
+                }
+                return ids;
+            }
+        }
+
+        public List<string> UserLogin_SelectInvalidAll(int limit)
         {
             var command = new MySqlCommand();
             command.Connection = connection;
@@ -132,16 +303,48 @@ namespace GitHub_Data_Collector
 
             using (MySqlDataReader dataReader = command.ExecuteReader())
             {
-                var users = new List<User>();
+                var logins = new List<string>();
                 while (dataReader.Read())
                 {
-                    users.Add(ParseUser(dataReader));
+                    logins.Add(dataReader.GetString("login"));
                 }
-                return users;
+                return logins;
             }
         }
 
-        public List<string> UserLogin_SelectNeedRepoUpdate(int limit)
+        public void UserLogin_MarkFollowerSearched(string userLogin, int searchedCount)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "INSERT INTO `github_rank`.`user_login_follower_searched` (`login`, `updated_at`, `searched_count`)" +
+                "VALUES (@login, @updated_at, @searched_count)" +
+                "ON DUPLICATE KEY UPDATE `updated_at` = @updated_at, `searched_count` = @searched_count";
+            command.Parameters.AddWithValue("@login", userLogin);
+            command.Parameters.AddWithValue("@updated_at", DateTime.Now);
+            command.Parameters.AddWithValue("@searched_count", searchedCount);
+
+            command.ExecuteNonQuery();
+        }
+
+        public List<string> UserLogin_SelectNeedFollowerSearch(int limit)
+        {
+            var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`user_login_need_follower_update` LIMIT @limit";
+            command.Parameters.AddWithValue("@limit", Math.Max(limit, 0));
+
+            using (MySqlDataReader dataReader = command.ExecuteReader())
+            {
+                var userLogins = new List<string>();
+                while (dataReader.Read())
+                {
+                    userLogins.Add(dataReader.GetString("login"));
+                }
+                return userLogins;
+            }
+        }
+
+        public List<string> UserLogin_SelectNeedRepoUpdate(int limit, int maximumRepoCount)
         {
             var command = new MySqlCommand();
             command.Connection = connection;
@@ -153,6 +356,10 @@ namespace GitHub_Data_Collector
                 var userLogins = new List<string>();
                 while (dataReader.Read())
                 {
+                    if (maximumRepoCount <= dataReader.GetInt32("fetched_public_repo_count"))
+                    {
+                        continue;
+                    }
                     userLogins.Add(dataReader.GetString("login"));
                 }
                 return userLogins;
@@ -177,7 +384,7 @@ namespace GitHub_Data_Collector
             }
         }
 
-        public List<string> OrganizationLogin_SelectNeedRepoUpdate(int limit)
+        public List<string> OrganizationLogin_SelectNeedRepoUpdate(int limit, int maximumRepoCount)
         {
             var command = new MySqlCommand();
             command.Connection = connection;
@@ -189,10 +396,34 @@ namespace GitHub_Data_Collector
                 var orgLogins = new List<string>();
                 while (dataReader.Read())
                 {
+                    if (maximumRepoCount <= dataReader.GetInt32("fetched_public_repo_count"))
+                    {
+                        continue;
+                    }
                     orgLogins.Add(dataReader.GetString("login"));
                 }
                 return orgLogins;
             }
+        }
+
+        public User User_SelectByLogin(string login)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`user_account` WHERE `login` = @login;";
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? ParseUser(dataReader) : null;
+        }
+
+        public Organization Organization_SelectByLogin(string login)
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT * FROM `github_rank`.`organization_account` WHERE `login` = @login;";
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? ParseOrganization(dataReader) : null;
         }
 
         private void User_InsertOrUpdate(User user)
@@ -209,7 +440,7 @@ namespace GitHub_Data_Collector
             {
                 command.CommandText = "INSERT INTO `github_rank`.`user` (`account_id`, `site_admin`, `suspended`, `suspended_at`, `updated_at`)" +
                     "VALUES (@account_id, @site_admin, @suspended, @suspended_at, @updated_at)" +
-                    "ON DUPLICATE KEY UPDATE `account_id` = @account_id";
+                    "ON DUPLICATE KEY UPDATE `account_id` = @account_id;";
             }
 
             command.Parameters.AddWithValue("@account_id", user.Id);
@@ -309,25 +540,62 @@ namespace GitHub_Data_Collector
             command.Parameters.AddWithValue("@valid", repo.Valid);
 
             command.ExecuteNonQuery();
+        }
 
-            //command.Parameters.Add("@id", MySqlDbType.Int64);
-            //command.Parameters.Add("@node_id", MySqlDbType.VarChar, 64);
-            //command.Parameters.Add("@owner_id", MySqlDbType.Int64);
-            //command.Parameters.Add("@name", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@description", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@language", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@license_key", MySqlDbType.VarChar, 128);
-            //command.Parameters.Add("@subscribers_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@stargazers_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@forks_count", MySqlDbType.Int32);
-            //command.Parameters.Add("@private", MySqlDbType.Bit);
-            //command.Parameters.Add("@fork", MySqlDbType.Bit);
-            //command.Parameters.Add("@archived", MySqlDbType.Bit);
-            //command.Parameters.Add("@html_url", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@api_url", MySqlDbType.VarChar, 1024);
-            //command.Parameters.Add("@created_at", MySqlDbType.DateTime);
-            //command.Parameters.Add("@parent_id", MySqlDbType.Int64);
-            //command.Parameters.Add("@source_id", MySqlDbType.Int64);
+        public void Repository_InsertOrUpdate(List<Repository> repositories)
+        {
+            if (repositories == null || repositories.Count == 0)
+            {
+                return;
+            }
+
+            foreach (List<Repository> repos in repositories.Split(100))
+            {
+                using var command = new MySqlCommand();
+                command.Connection = connection;
+
+                var commandText = new StringBuilder();
+                for (int i = 0; i < repos.Count; i++)
+                {
+                    Repository repo = repos[i];
+                    if (repo.Valid)
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
+                            $"VALUES (@id{i}, @node_id{i}, @owner_id{i}, @name{i}, @description{i}, @language{i}, @license_key{i}, @subscribers_count{i}, @stargazers_count{i}, @forks_count{i}, @fork{i}, @archived{i}, @html_url{i}, @api_url{i}, @created_at{i}, @updated_at{i}, @parent_id{i}, @source_id{i}, @fetched_at{i}, @valid{i}) " +
+                            $"ON DUPLICATE KEY UPDATE `owner_id` = @owner_id{i}, `name` = @name{i}, `description` = @description{i}, `language` = @language{i}, `license_key` = @license_key{i}, `subscribers_count` = @subscribers_count{i}, `stargazers_count` = @stargazers_count{i}, `forks_count` = @forks_count{i}, `fork` = @fork{i}, `archived` = @archived{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `created_at` = @created_at{i}, `updated_at` = @updated_at{i}, `fetched_at` = @fetched_at{i}, `valid` = @valid{i};");
+                    }
+                    else
+                    {
+                        commandText.Append("INSERT INTO `github_rank`.`repository` (`id`, `node_id`, `owner_id`, `name`, `description`, `language`, `license_key`, `subscribers_count`, `stargazers_count`, `forks_count`, `fork`, `archived`, `html_url`, `api_url`, `created_at`, `updated_at`, `parent_id`, `source_id`, `fetched_at`, `valid`)" +
+                            $"VALUES (@id{i}, @node_id{i}, @owner_id{i}, @name{i}, @description{i}, @language{i}, @license_key{i}, @subscribers_count{i}, @stargazers_count{i}, @forks_count{i}, @fork{i}, @archived{i}, @html_url{i}, @api_url{i}, @created_at{i}, @updated_at{i}, @parent_id{i}, @source_id{i}, @fetched_at{i}, @valid{i})" +
+                            $"ON DUPLICATE KEY UPDATE `owner_id` = @owner_id{i}, `name` = @name{i}, `description` = @description{i}, `language` = @language{i}, `license_key` = @license_key{i}, `html_url` = @html_url{i}, `api_url` = @api_url{i}, `updated_at` = @updated_at{i};");
+                    }
+
+                    command.Parameters.AddWithValue($"@id{i}", repo.Id);
+                    command.Parameters.AddWithValue($"@node_id{i}", repo.NodeId);
+                    command.Parameters.AddWithValue($"@owner_id{i}", repo.OwnerId);
+                    command.Parameters.AddWithValue($"@name{i}", repo.Name);
+                    command.Parameters.AddWithValue($"@description{i}", repo.Description);
+                    command.Parameters.AddWithValue($"@language{i}", repo.Language);
+                    command.Parameters.AddWithValue($"@license_key{i}", repo.LicenseKey);
+                    command.Parameters.AddWithValue($"@subscribers_count{i}", repo.SubscribersCount);
+                    command.Parameters.AddWithValue($"@stargazers_count{i}", repo.StargazersCount);
+                    command.Parameters.AddWithValue($"@forks_count{i}", repo.ForksCount);
+                    command.Parameters.AddWithValue($"@fork{i}", repo.Fork);
+                    command.Parameters.AddWithValue($"@archived{i}", repo.Archived);
+                    command.Parameters.AddWithValue($"@html_url{i}", repo.HtmlUrl);
+                    command.Parameters.AddWithValue($"@api_url{i}", repo.ApiUrl);
+                    command.Parameters.AddWithValue($"@created_at{i}", repo.CreatedAt);
+                    command.Parameters.AddWithValue($"@updated_at{i}", repo.UpdatedAt);
+                    command.Parameters.AddWithValue($"@parent_id{i}", repo.ParentId);
+                    command.Parameters.AddWithValue($"@source_id{i}", repo.SourceId);
+                    command.Parameters.AddWithValue($"@fetched_at{i}", repo.FetchedAt);
+                    command.Parameters.AddWithValue($"@valid{i}", repo.Valid);
+                }
+                command.CommandText = commandText.ToString();
+
+                command.ExecuteNonQuery();
+            }
         }
 
         public Repository Repository_SelectByName(string name)
@@ -440,6 +708,20 @@ namespace GitHub_Data_Collector
                 }
             }
             return mostStarRepos;
+        }
+
+        public int Repository_Count()
+        {
+            using (var command = new MySqlCommand())
+            {
+                command.Connection = connection;
+                command.CommandText = "SELECT count(*) AS `repository_count` FROM `github_rank`.`repository`;";
+
+                using (MySqlDataReader dataReader = command.ExecuteReader())
+                {
+                    return dataReader.Read() ? dataReader.GetInt32("repository_count") : 0;
+                }
+            }
         }
         #endregion
 
