@@ -622,6 +622,26 @@ namespace GitHubRankWeb.Core
 
         }
 
+        public int Account_CountAll()
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT count(*) AS `count` FROM `github_rank`.`account`";
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? dataReader.GetInt32("count") : 0;
+        }
+
+        public int Repository_CountAll()
+        {
+            using var command = new MySqlCommand();
+            command.Connection = connection;
+            command.CommandText = "SELECT count(*) AS `count` FROM `github_rank`.`repository`";
+
+            using MySqlDataReader dataReader = command.ExecuteReader();
+            return dataReader.Read() ? dataReader.GetInt32("count") : 0;
+        }
+
         private User ParseUser(MySqlDataReader dataReader)
         {
             return new User(

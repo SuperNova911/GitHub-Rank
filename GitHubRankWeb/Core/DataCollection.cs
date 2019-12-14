@@ -14,6 +14,9 @@ namespace GitHubRankWeb.Core
             FetchPeriod = TimeSpan.FromHours(1);
         }
 
+        public int TotalAccounts { get; private set; }
+        public int TotalRepositories { get; private set; }
+
         public List<RankItem> MostStarUsers
         {
             get
@@ -200,6 +203,9 @@ namespace GitHubRankWeb.Core
 
         public void UpdateCollections()
         {
+            TotalAccounts = DatabaseManagerWeb.Instance.Account_CountAll();
+            TotalRepositories = DatabaseManagerWeb.Instance.Repository_CountAll();
+
             MostStarUsers = DatabaseManagerWeb.Instance.MostStarUser_SelectAll(200);
             MostStarOrganizations = DatabaseManagerWeb.Instance.MostStarOrganization_SelectAll(200);
             MostStarRepositories = DatabaseManagerWeb.Instance.MostStarRepository_SelectAll(200);

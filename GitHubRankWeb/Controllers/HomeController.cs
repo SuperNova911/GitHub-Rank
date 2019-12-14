@@ -21,6 +21,8 @@ namespace GitHubRankWeb.Controllers
 
         public IActionResult Index()
         {
+            ViewData["TotalAccounts"] = string.Format("{0:N0}", DataCollection.Instance.TotalAccounts);
+            ViewData["TotalRepositories"] = string.Format("{0:N0}", DataCollection.Instance.TotalRepositories);
             ViewData["MostStarUsers"] = DataCollection.Instance.MostStarUsers;
             ViewData["MostStarOrganizations"] = DataCollection.Instance.MostStarOrganizations;
             ViewData["MostStarRepositories"] = DataCollection.Instance.MostStarRepositories;
